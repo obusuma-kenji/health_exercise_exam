@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>健康運動指導士 ミニ模試</title>
+  <meta name="description" content="健康運動指導士 ミニ模試 #1。50問・即時採点・タイマー・マーク・分野別スコア・履歴保存。設定UIなし。" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html { scroll-behavior: smooth; }
+    .btn { padding: 0.5rem 0.75rem; border-radius: 0.5rem; background: #e2e8f0; }
+    .btn:hover { background:#cbd5e1; }
+    .card { background:#fff; border-radius:1rem; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    .badge { padding:.25rem .75rem; border-radius:999px; font-weight:600; font-size:.875rem; }
+    .choice { display:flex; gap:.75rem; padding:.75rem; border:1px solid #e2e8f0; border-radius:.75rem; cursor:pointer; }
+    .choice:hover { background:#f8fafc; }
+    .ring-amber { box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.6); }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 text-slate-900">
+  <div class="max-w-6xl mx-auto p-4" id="app"></div>
+
+<script>
+// ===== 問題データ（No, Domain, Difficulty, Question, A, B, C, D, Correct, Explanation） =====
+const RAW_ITEMS = [
+  [1,"生理","★☆☆","ATP-PC系が主に担う運動はどれ？","100m全力疾走の前半","フルマラソン中盤","60分のサイクリング","30分のジョギング","A","ATP-PCは約10秒の瞬発系。"],
+  [2,"生理","★☆☆","解糖系の主燃料は？","脂肪酸","乳酸","グルコース/グリコーゲン","ケトン体","C","無酸素解糖は糖を主に用いる。"],
+  [3,"生理","★★☆","有酸素系のエネルギー産生の場は？","細胞質","ミトコンドリア","ゴルジ体","小胞体","B","酸化的リン酸化はミトコンドリアで行われる。"],
+  [4,"生理","★★☆","乳酸閾値(LT)の説明として正しいのは？","血中乳酸が常にゼロになる点","乳酸除去＝産生の点","乳酸産生が除去を上回り急増し始める点","最大心拍数に一致する点","C","LTは乳酸急増の分岐点。"],
+  [5,"生理","★☆☆","VO2maxは何の指標？","筋力","柔軟性","全身持久力","敏捷性","C","最大酸素摂取量＝持久力の総合指標。"],
+  [6,"生理","★★☆","心拍出量Qの式は？","Q=SV/HR","Q=HR×SV","Q=VO2×HR","Q=SV−HR","B","心拍数×1回拍出量。"],
+  [7,"生理","★★☆","a-vO2差が増大する状況は？","安静臥位","軽い散歩","運動時の末梢酸素利用増大時","睡眠時","C","末梢で酸素抽出が増える。"],
+  [8,"生理","★☆☆","RERが1.0超を示す状況の解釈は？","脂質酸化優位","解糖優位・CO2増","基礎代謝低下","呼吸抑制","B","強度上昇で解糖が優位に。"],
+  [9,"生理","★☆☆","DOMSのピークは一般にいつ？","直後","6時間後","24〜72時間後","1週間後","C","遅発性筋痛は1〜3日で最大。"],
+  [10,"生理","★★☆","トレーニング初期の筋力増加の主因は？","筋肥大","腱肥厚","神経適応","骨密度上昇","C","数週は神経要因が中心。"],
+  [11,"指標","★☆☆","Borg RPE 13の主観強度は？","非常に楽","ややきつい","最大","楽","B","6–20尺度で13はややきつい。"],
+  [12,"指標","★☆☆","中強度のMETs範囲は？","<3.0","3.0–5.9","6.0–8.9","≥9.0","B","一般に3–5.9 METs。"],
+  [13,"指標","★☆☆","推定HRmaxの一般式は？","230−年齢","220−年齢","200−年齢","180−年齢","B","単純式として用いられる。"],
+  [14,"指標","★★☆","Karvonen法は何を用いる？","HRmaxのみ","安静時心拍のみ","HRR(心拍予備率)","VO2maxのみ","C","目標心拍をHRRで算定。"],
+  [15,"指標","★☆☆","BMIの式は？","体重/身長","体重/身長^2","身長/体重^2","体重×身長","B","kgとmで算出。"],
+  [16,"指標","★★☆","1METの定義は？","安静時の酸素摂取1mL/kg/min","約3.5 mL/kg/min","5 kcal/kg/min","安静時心拍数","B","便宜上3.5 mL/kg/min。"],
+  [17,"指標","★☆☆","診察室血圧で高血圧とされる基準は？","130/80","135/85","140/90","160/100","C","一般的な診断基準。"],
+  [18,"指標","★★☆","メタボ判定の腹囲(日本) 基準は？","男85/女90","男90/女85","男80/女80","男90/女90","A","日本基準は男≥85、女≥90。"],
+  [19,"指標","★★☆","空腹時血糖で糖尿病型の一指標は？","100mg/dL","110mg/dL","126mg/dL","140mg/dL","C","126以上（総合判断）。"],
+  [20,"指標","★★☆","心拍予備率(HRR)の式は？","HRmax−HRrest","HRmax/HRrest","HRmax+HRrest","HRmax×HRrest","A","最大−安静。"],
+  [21,"処方","★☆☆","FITT-VPのVは？","Velocity","Variety","Volume","Validity","C","総運動量を意味。"],
+  [22,"処方","★☆☆","初心者の筋力トレ頻度の推奨は？","毎日","週1回","週2–3回(非連日)","月1回","C","回復を挟む。"],
+  [23,"処方","★★☆","柔軟性向上の静的伸張は？","5秒×1回","10秒×1回","20–30秒×2–4回","60秒×10回","C","主要ガイドの目安。"],
+  [24,"処方","★★☆","高血圧者の筋トレで避けるべきは？","呼吸を止める","軽めの負荷","回数を分ける","ストレッチ","A","バルサルバは血圧急上昇。"],
+  [25,"処方","★★☆","糖尿病者の低血糖対策で適切は？","糖質携行","水分制限","夜間の空腹時に高強度","インスリン直後に高強度","A","携行とタイミング配慮が基本。"],
+  [26,"処方","★★★","心疾患既往者の筋トレ留意は？","高負荷・少回数","低〜中強度・呼吸止め回避","無酸素のみ","疼痛優先でフォーム不問","B","安全域重視。"],
+  [27,"処方","★★☆","妊娠中の運動中止サインは？","軽い発汗","会話可能","規則的子宮収縮","心拍上昇","C","危険サインは即中止・受診。"],
+  [28,"処方","★☆☆","高齢者のバランス訓練の例は？","片脚立ち","ベンチプレス1RM測定","100m全力走","長時間の正座","A","安全配慮のもと実施。"],
+  [29,"処方","★★☆","捻挫急性期の初期対応は？","温熱のみ","RICE/POLICE","強い牽引","痛み無視で荷重","B","保護・冷却等が原則。"],
+  [30,"処方","★★☆","骨粗鬆症への運動で重要でないものは？","荷重運動","筋力・バランス訓練","転倒予防","完全な不動化","D","不動化は逆効果。"],
+  [31,"安全","★★☆","PAR-Q+の目的は？","筋力測定","運動前スクリーニング","食事記録","睡眠評価","B","参加前の安全確認。"],
+  [32,"安全","★★★","AED使用の基本手順で不適切は？","安全確認→通報→CPR→AED装着","AEDの指示に従う","CPRを中断して長く会話する","ショック後もCPR再開","C","中断は最小に。"],
+  [33,"安全","★★☆","運動中に失神傾向、まず行う体位は？","座位前屈","うつ伏せ","仰臥位＋下肢挙上","立位保持","C","静脈還流を促進。"],
+  [34,"安全","★★☆","高リスクで医師許可が必要な例は？","安定した感冒","不安定狭心症","軽い筋肉痛","花粉症","B","重大心疾患は要許可。"],
+  [35,"安全","★★☆","感染症流行期の教室対策で適切でないのは？","換気","距離確保","消毒","密集促進","D","密は避ける。"],
+  [36,"安全","★★☆","事故報告書に含めるべきでないのは？","日時","状況","再発防止策","主観的感想のみ","D","事実と対策が重要。"],
+  [37,"安全","★★★","心不全悪化の警戒サインは？","急激な体重増加と浮腫","食欲増進","安静時脈拍低下","皮膚乾燥","A","体液貯留の兆候。"],
+  [38,"安全","★★☆","熱中症予防で不適切は？","十分な補水","暑熱順化","高温時の強度調整","利尿目的の脱水","D","脱水は危険。"],
+  [39,"公衆衛生","★☆☆","一次予防は？","発症予防","早期発見","リハビリ","緩和ケア","A","生活習慣改善等。"],
+  [40,"公衆衛生","★☆☆","NNTが小さいほど示すことは？","介入効率が高い","無効","害が大きい","コスト増","A","少人数で1人の効果が得られる。"],
+  [41,"行動変容","★★☆","TTMの準備期の特徴は？","行動開始の意思がなく情報収集中","具体的計画あり","6ヶ月以上継続","再発直後","B","計画段階。"],
+  [42,"行動変容","★★☆","MI面談の特徴として不適切は？","共感的姿勢","是認","強圧的指示","引き出し","C","強要しない。"],
+  [43,"行動変容","★☆☆","SMARTのAは？","Available","Achievable","Accurate","Active","B","達成可能。"],
+  [44,"公衆衛生","★★☆","プレゼンティーズムとは？","欠勤のこと","在席だが生産性低下","過剰勤務","離職意向","B","健康影響で効率低下。"],
+  [45,"実務","★★☆","職場導入での基本KPIでないのは？","歩数","RPE変化","個人の納税額","欠勤/プレゼンティーズム","C","納税額は不適切。"],
+  [46,"実務","★★☆","初回面談に含まれないのは？","既往歴","服薬","地域の天気予報詳細","目標・障壁","C","必須情報ではない。"],
+  [47,"実務","★★★","低血糖が疑われる兆候は？","冷汗・ふるえ","多幸感と発汗なし","体温上昇のみ","皮膚乾燥のみ","A","自律神経症状に注意。"],
+  [48,"実務","★★☆","就業配慮提案に含まれるのは？","業務強度調整・休憩導入","給与即時増額","強制残業","私生活介入","A","実務的・妥当な配慮。"],
+  [49,"実務","★★☆","プログラム記録項目として妥当でないのは？","RPE","心拍","歩数","個人マイナンバー","D","機微情報・目的外。"],
+  [50,"実務","★★☆","Teach-back法の要点は？","専門用語で講師が反復","利用者が自分の言葉で要点説明","質問を遮断","時間短縮のため説明省略","B","理解確認の手法。"],
+];
+
+// ===== 便利関数 =====
+const $ = (sel, el=document) => el.querySelector(sel);
+const el = (tag, cls="", html="") => { const e=document.createElement(tag); if(cls) e.className=cls; if(html!==undefined) e.innerHTML=html; return e; };
+const pad2 = n => String(n).padStart(2,'0');
+
+function normalize(items){
+  return items.map(([No, Domain, Difficulty, Question, A, B, C, D, Correct, Explanation])=>({No,Domain,Difficulty,Question,options:{A,B,C,D},Correct,Explanation}));
+}
+
+// ===== 状態（固定設定：設定UIなし） =====
+const FIXED = { timeMinutes: 120, autoSubmitOnLast: true, instantGrade: true };
+const bank = normalize(RAW_ITEMS);
+const TOTAL = bank.length;
+let state = {
+  started: false,
+  secondsLeft: FIXED.timeMinutes*60,
+  submitted: false,
+  idx: 0,
+  answers: Array(TOTAL).fill(null), // 'A'|'B'|'C'|'D'|null
+  flags: Array(TOTAL).fill(false),
+  attempts: []
+};
+
+// ローカルストレージ
+const LSKEY = 'mini_exam_v1_state_html';
+try { const s = JSON.parse(localStorage.getItem(LSKEY) || 'null'); if (s && s.answers?.length === TOTAL) state = {...state, ...s}; } catch {}
+const persist = () => { try { localStorage.setItem(LSKEY, JSON.stringify(state)); } catch {} };
+
+// ===== 採点 =====
+function grade(){
+  const perDomain = {}; let correct=0;
+  for(let i=0;i<TOTAL;i++){
+    const q = bank[i]; const ok = state.answers[i] === q.Correct;
+    if(!perDomain[q.Domain]) perDomain[q.Domain]={total:0,ok:0};
+    perDomain[q.Domain].total++; if(ok){ perDomain[q.Domain].ok++; correct++; }
+  }
+  return {correct, perDomain};
+}
+
+// ===== タイマー =====
+let timerId = null;
+function startTimer(){
+  if(timerId) return; state.started = true; persist();
+  timerId = setInterval(()=>{
+    if(state.submitted) { clearInterval(timerId); timerId=null; return; }
+    state.secondsLeft = Math.max(0, state.secondsLeft-1);
+    if(state.secondsLeft === 0){ doSubmit(); }
+    render();
+  },1000);
+}
+
+// ===== 画面描画 =====
+function render(){
+  const root = $('#app');
+  root.innerHTML = '';
+
+  // ヘッダー
+  const header = el('header','flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4');
+  header.append(el('h1','text-2xl font-bold','健康運動指導士 ミニ模試 '));
+  const hRight = el('div','flex items-center gap-2');
+  const badge = el('span','badge '+(state.submitted?'bg-emerald-100 text-emerald-700':'bg-indigo-100 text-indigo-700'));
+  badge.textContent = state.submitted ? '提出済み' : (state.started ? `残り ${pad2(Math.floor(state.secondsLeft/60))}:${pad2(state.secondsLeft%60)}` : '未開始');
+  hRight.append(badge);
+  if(!state.started){
+    const btnStart = el('button','px-3 py-1.5 rounded-lg bg-indigo-600 text-white shadow hover:bg-indigo-700','開始');
+    btnStart.onclick = ()=>{ startTimer(); render(); };
+    hRight.append(btnStart);
+  }
+  const btnReset = el('button','btn','リセット');
+  btnReset.onclick = ()=>{ localStorage.removeItem(LSKEY); location.reload(); };
+  hRight.append(btnReset);
+  header.append(hRight);
+  root.append(header);
+
+  // 進捗
+  const answeredCount = state.answers.filter(Boolean).length;
+  const unansweredCount = TOTAL - answeredCount;
+  const progress = Math.round(answeredCount/TOTAL*100);
+  const bar = el('div','w-full h-2 bg-slate-200 rounded-full overflow-hidden mb-2');
+  const barFill = el('div','h-full bg-indigo-500'); barFill.style.width = progress+"%"; bar.append(barFill);
+  root.append(bar);
+  root.append(el('div','text-sm text-slate-600 mb-4',`回答済み ${answeredCount}/${TOTAL}（未回答 ${unansweredCount}）`));
+
+  // ナビゲータ
+  const nav = el('div','card p-3 mb-4');
+  const grid = el('div','grid grid-cols-10 sm:grid-cols-12 gap-1');
+  for(let i=0;i<TOTAL;i++){
+    const isCurrent = i===state.idx; const ans = state.answers[i]; const f = state.flags[i];
+    const b = el('button',`text-sm px-2 py-1 rounded border transition focus:outline-none focus:ring-2 focus:ring-indigo-400 ${isCurrent?'border-indigo-600':'border-slate-200'} ${ans?'bg-emerald-50':'bg-white'} ${f?'ring-amber':''}`);
+    b.textContent = i+1; b.onclick=()=>{ state.idx=i; persist(); render(); };
+    grid.append(b);
+  }
+  nav.append(grid); root.append(nav);
+
+  // 問題
+  const q = bank[state.idx];
+  const card = el('div','card p-5');
+  const top = el('div','flex items-center justify-between mb-3');
+  top.append(el('div','text-sm text-slate-600',`No.${state.idx+1} / ${TOTAL}｜${q.Domain}｜${q.Difficulty}`));
+  const mark = el('button','px-3 py-1.5 rounded-lg border');
+  mark.textContent = state.flags[state.idx] ? '★ マーク中（M）' : '☆ マーク（M）';
+  mark.onclick = ()=>{ state.flags[state.idx]=!state.flags[state.idx]; persist(); render(); };
+  top.append(mark);
+  card.append(top);
+
+  card.append(el('h2','text-lg font-semibold mb-4',q.Question));
+
+  const choiceWrap = el('div','space-y-2');
+  ['A','B','C','D'].forEach(letter=>{
+    const lab = el('label','choice');
+    const inp = el('input'); inp.type='radio'; inp.name='q_'+q.No; inp.className='mt-1 sr-only';
+    inp.checked = state.answers[state.idx]===letter;
+    inp.disabled = state.submitted;
+    inp.onchange = ()=> select(letter);
+
+    const text = el('div','');
+    const title = el('div','font-semibold',`${letter}. ${q.options[letter]}`);
+    text.append(title);
+    if(FIXED.instantGrade && state.answers[state.idx]){
+      if(q.Correct===letter) text.append(el('div','text-emerald-700 text-sm','正解'));
+      if(state.answers[state.idx]===letter && q.Correct!==letter) text.append(el('div','text-rose-700 text-sm','不正解'));
+    }
+
+    lab.append(inp); lab.append(text);
+    if(state.answers[state.idx]===letter){ lab.style.borderColor='#6366f1'; lab.style.background='#eef2ff'; }
+    choiceWrap.append(lab);
+  });
+  card.append(choiceWrap);
+
+  if(FIXED.instantGrade && state.answers[state.idx]){
+    const exp = el('div','mt-4 p-3 rounded-xl bg-emerald-50 text-emerald-800');
+    exp.append(el('div','font-semibold','解説'));
+    exp.append(el('div','',q.Explanation));
+    exp.append(el('div','mt-1 text-sm',`正答: ${q.Correct}. ${q.options[q.Correct]}`));
+    card.append(exp);
+  }
+
+  const navRow = el('div','flex items-center justify-between mt-5');
+  const prev = el('button','btn','← 前へ'); prev.onclick=()=>{ state.idx=Math.max(0,state.idx-1); persist(); render(); };
+  const info = el('div','text-sm text-slate-600',`未回答: ${unansweredCount}`);
+  const next = el('button','btn','次へ →'); next.onclick=()=>{ state.idx=Math.min(TOTAL-1,state.idx+1); persist(); render(); };
+  navRow.append(prev, info, next);
+  card.append(navRow);
+
+  if(!state.submitted){
+    const row = el('div','flex justify-end mt-3 gap-2');
+    const submit = el('button','px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700','採点する');
+    submit.onclick = ()=> doSubmit();
+    row.append(submit);
+    card.append(row);
+  }
+
+  root.append(card);
+
+  // ステータス & 分野別
+  const {correct, perDomain} = grade();
+  const grid2 = el('div','mt-4 grid md:grid-cols-2 gap-4');
+
+  const st = el('div','card p-4');
+  st.append(el('h3','font-semibold mb-2','ステータス'));
+  const ul = el('ul','text-sm space-y-1');
+  ul.append(el('li','',`回答数: ${answeredCount} / ${TOTAL}`));
+  ul.append(el('li','',`未回答: ${unansweredCount}`));
+  ul.append(el('li','',`マーク: ${state.flags.filter(Boolean).length}`));
+  if(state.submitted || (FIXED.instantGrade && state.answers[state.idx])){
+    ul.append(el('li','font-semibold text-emerald-700',`総得点: ${correct} / ${TOTAL}（${Math.round(correct/TOTAL*100)}%）`));
+  }
+  st.append(ul);
+
+  const dom = el('div','card p-4');
+  dom.append(el('h3','font-semibold mb-2','分野別スコア'));
+  const domGrid = el('div','grid grid-cols-2 gap-2 text-sm');
+  Object.entries(perDomain).forEach(([name, v])=>{
+    const cell = el('div','p-2 rounded-lg border border-slate-200');
+    cell.append(el('div','font-semibold',name));
+    cell.append(el('div','',`${v.ok} / ${v.total}（${Math.round(v.ok/v.total*100)}%）`));
+    domGrid.append(cell);
+  });
+  dom.append(domGrid);
+
+  grid2.append(st, dom);
+  root.append(grid2);
+
+  // 履歴
+  if(state.attempts.length){
+    const hist = el('div','mt-4 card p-4');
+    hist.append(el('h3','font-semibold mb-2','受験履歴'));
+    const tblWrap = el('div','overflow-x-auto');
+    const tbl = el('table','min-w-full text-sm');
+    const thead = el('thead','');
+    thead.innerHTML = `<tr class="text-left border-b border-slate-200"><th class="py-1 pr-3">日時</th><th class="py-1 pr-3">得点</th><th class="py-1 pr-3">％</th></tr>`;
+    const tbody = el('tbody','');
+    state.attempts.forEach(a=>{
+      const tr = el('tr','border-b border-slate-100');
+      tr.innerHTML = `<td class="py-1 pr-3">${new Date(a.stamp).toLocaleString()}</td><td class="py-1 pr-3">${a.correct} / ${a.total}</td><td class="py-1 pr-3">${a.percent}%</td>`;
+      tbody.append(tr);
+    });
+    tbl.append(thead, tbody); tblWrap.append(tbl); hist.append(tblWrap); root.append(hist);
+  }
+
+  root.append(el('footer','text-xs text-slate-500 mt-6 mb-8','© Mini Exam #1 for 健康運動指導士 – 学習用途のみ'));
+}
+
+function select(letter){
+  if(state.submitted) return;
+  state.answers[state.idx] = letter;
+  if(FIXED.autoSubmitOnLast && state.idx === TOTAL-1){ doSubmit(); }
+  persist(); render();
+}
+
+function doSubmit(){
+  if(state.submitted) return;
+  state.submitted = true;
+  const {correct} = grade();
+  const att = { timeMinutes: FIXED.timeMinutes, total: TOTAL, correct, percent: Math.round(correct/TOTAL*100), stamp: new Date().toISOString() };
+  state.attempts = [att, ...state.attempts].slice(0,50);
+  persist(); render();
+}
+
+// 初期描画
+render();
+</script>
+</body>
+</html>
